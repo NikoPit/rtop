@@ -3,6 +3,8 @@ name = "rtop"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
+description = "A minimal process resource manager for the terminal"
+repository = "https://github.com/NikoPit/rtop"
 
 [dependencies]
 crossterm = "0.28"

@@ -18,7 +18,7 @@
         in {
           default = pkgs.rustPlatform.buildRustPackage {
             pname = "rxtop";
-            version = "0.1.0";
+            version = "0.1.1";
             src = self;
             cargoLock.lockFile = ./Cargo.lock;
             meta.description = "A minimal process resource manager for the terminal";

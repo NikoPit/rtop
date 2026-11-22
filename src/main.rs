@@ -153,26 +153,7 @@ fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<()> 
 }
 
 fn draw(frame: &mut ratatui::Frame<'_>, app: &App) {
-    let areas = Layout::vertical([
-        Constraint::Length(3),
-        Constraint::Min(5),
-        Constraint::Length(2),
-    ])
-    .split(frame.area());
-
-    let memory = format!(
-        "{} / {}",
-        format_bytes(app.system.used_memory()),
-        format_bytes(app.system.total_memory())
-    );
-    let summary = Paragraph::new(Line::from(vec![
-        Span::styled("CPU ", Style::default().fg(Color::Cyan)),
-        Span::raw(format!("{:.1}%    ", app.system.global_cpu_usage())),
-        Span::styled("MEM ", Style::default().fg(Color::Cyan)),
-        Span::raw(memory),
-    ]))
-    .block(Block::default().title(" rxtop ").borders(Borders::ALL));
-    frame.render_widget(summary, areas[0]);
+    let areas = Layout::vertical([Constraint::Min(5), Constraint::Length(2)]).split(frame.area());
 
     let header = Row::new(["PID", "NAME", "CPU%", "MEMORY"]).style(
         Style::default()
@@ -210,7 +191,7 @@ fn draw(frame: &mut ratatui::Frame<'_>, app: &App) {
     );
     let mut table_state = TableState::default();
     table_state.select(app.selected_index());
-    frame.render_stateful_widget(table, areas[1], &mut table_state);
+    frame.render_stateful_widget(table, areas[0], &mut table_state);
 
     let footer = Paragraph::new(vec![
         Line::from("↑/↓ select    k terminate    q quit"),
@@ -219,7 +200,7 @@ fn draw(frame: &mut ratatui::Frame<'_>, app: &App) {
             Style::default().fg(Color::Yellow),
         )),
     ]);
-    frame.render_widget(footer, areas[2]);
+    frame.render_widget(footer, areas[1]);
 }
 
 fn format_bytes(bytes: u64) -> String {

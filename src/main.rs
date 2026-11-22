@@ -26,6 +26,8 @@ struct App {
     processes: Vec<ProcessInfo>,
     selected_pid: Option<Pid>,
     status: String,
+    search: String,
+    searching: bool,
 }
 
 impl App {
@@ -35,6 +37,8 @@ impl App {
             processes: Vec::new(),
             selected_pid: None,
             status: String::new(),
+            search: String::new(),
+            searching: false,
         };
         app.refresh();
         app
@@ -60,28 +64,45 @@ impl App {
                 .then_with(|| left.name.cmp(&right.name))
         });
 
-        if !self
-            .processes
-            .iter()
-            .any(|process| Some(process.pid) == self.selected_pid)
-        {
-            self.selected_pid = self.processes.first().map(|process| process.pid);
-        }
+        self.keep_selection_visible();
     }
 
     fn move_selection(&mut self, offset: isize) {
-        if self.processes.is_empty() {
+        let visible = self.visible_process_indices();
+        if visible.is_empty() {
             self.selected_pid = None;
             return;
         }
 
-        let current = self
-            .processes
+        let current = visible
             .iter()
-            .position(|process| Some(process.pid) == self.selected_pid)
+            .position(|&index| Some(self.processes[index].pid) == self.selected_pid)
             .unwrap_or(0);
-        let next = (current as isize + offset).clamp(0, self.processes.len() as isize - 1) as usize;
-        self.selected_pid = Some(self.processes[next].pid);
+        let next = (current as isize + offset).clamp(0, visible.len() as isize - 1) as usize;
+        self.selected_pid = Some(self.processes[visible[next]].pid);
+    }
+
+    fn visible_process_indices(&self) -> Vec<usize> {
+        let query = self.search.to_lowercase();
+        self.processes
+            .iter()
+            .enumerate()
+            .filter_map(|(index, process)| {
+                let matches_name = process.name.to_lowercase().contains(&query);
+                let matches_pid = process.pid.as_u32().to_string().contains(&query);
+                (matches_name || matches_pid).then_some(index)
+            })
+            .collect()
+    }
+
+    fn keep_selection_visible(&mut self) {
+        let visible = self.visible_process_indices();
+        if !visible
+            .iter()
+            .any(|&index| Some(self.processes[index].pid) == self.selected_pid)
+        {
+            self.selected_pid = visible.first().map(|&index| self.processes[index].pid);
+        }
     }
 
     fn kill_selected(&mut self) {
@@ -104,9 +125,9 @@ impl App {
     }
 
     fn selected_index(&self) -> Option<usize> {
-        self.processes
+        self.visible_process_indices()
             .iter()
-            .position(|process| Some(process.pid) == self.selected_pid)
+            .position(|&index| Some(self.processes[index].pid) == self.selected_pid)
     }
 }
 
@@ -136,12 +157,38 @@ fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<()> 
         if event::poll(Duration::from_millis(100))?
             && let Event::Key(key) = event::read()?
         {
-            match key.code {
-                KeyCode::Char('q') => return Ok(()),
-                KeyCode::Char('k') => app.kill_selected(),
-                KeyCode::Up => app.move_selection(-1),
-                KeyCode::Down => app.move_selection(1),
-                _ => {}
+            if app.searching {
+                match key.code {
+                    KeyCode::Esc => {
+                        app.search.clear();
+                        app.searching = false;
+                        app.keep_selection_visible();
+                    }
+                    KeyCode::Enter => app.searching = false,
+                    KeyCode::Backspace => {
+                        app.search.pop();
+                        app.keep_selection_visible();
+                    }
+                    KeyCode::Char(character) => {
+                        app.search.push(character);
+                        app.keep_selection_visible();
+                    }
+                    _ => {}
+                }
+            } else {
+                match key.code {
+                    KeyCode::Char('q') => return Ok(()),
+                    KeyCode::Char('k') => app.kill_selected(),
+                    KeyCode::Char('/') => {
+                        app.search.clear();
+                        app.searching = true;
+                        app.status.clear();
+                        app.keep_selection_visible();
+                    }
+                    KeyCode::Up => app.move_selection(-1),
+                    KeyCode::Down => app.move_selection(1),
+                    _ => {}
+                }
             }
         }
 
@@ -160,7 +207,9 @@ fn draw(frame: &mut ratatui::Frame<'_>, app: &App) {
             .fg(Color::Cyan)
             .add_modifier(Modifier::BOLD),
     );
-    let rows = app.processes.iter().map(|process| {
+    let visible = app.visible_process_indices();
+    let rows = visible.iter().map(|&index| {
+        let process = &app.processes[index];
         Row::new(vec![
             Cell::from(process.pid.as_u32().to_string()),
             Cell::from(process.name.clone()),
@@ -188,8 +237,13 @@ fn draw(frame: &mut ratatui::Frame<'_>, app: &App) {
     table_state.select(app.selected_index());
     frame.render_stateful_widget(table, areas[0], &mut table_state);
 
+    let footer_text = if app.searching || !app.search.is_empty() {
+        format!("/{}", app.search)
+    } else {
+        app.status.clone()
+    };
     let footer = Paragraph::new(Span::styled(
-        app.status.as_str(),
+        footer_text,
         Style::default().fg(Color::Yellow),
     ));
     frame.render_widget(footer, areas[1]);
@@ -203,5 +257,53 @@ fn format_bytes(bytes: u64) -> String {
         format!("{:.1} GiB", bytes as f64 / GIB)
     } else {
         format!("{:.1} MiB", bytes as f64 / MIB)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{App, ProcessInfo};
+    use sysinfo::{Pid, System};
+
+    fn app_with_processes() -> App {
+        App {
+            system: System::new(),
+            processes: vec![
+                ProcessInfo {
+                    pid: Pid::from_u32(42),
+                    name: String::from("worker"),
+                    cpu_usage: 0.0,
+                    memory: 0,
+                },
+                ProcessInfo {
+                    pid: Pid::from_u32(108),
+                    name: String::from("database"),
+                    cpu_usage: 0.0,
+                    memory: 0,
+                },
+            ],
+            selected_pid: Some(Pid::from_u32(42)),
+            status: String::new(),
+            search: String::new(),
+            searching: false,
+        }
+    }
+
+    #[test]
+    fn search_matches_names_without_case_sensitivity() {
+        let mut app = app_with_processes();
+        app.search = String::from("DATA");
+
+        assert_eq!(app.visible_process_indices(), vec![1]);
+    }
+
+    #[test]
+    fn search_matches_pid_and_keeps_selection_in_results() {
+        let mut app = app_with_processes();
+        app.search = String::from("108");
+        app.keep_selection_visible();
+
+        assert_eq!(app.visible_process_indices(), vec![1]);
+        assert_eq!(app.selected_pid, Some(Pid::from_u32(108)));
     }
 }

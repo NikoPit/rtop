@@ -10,8 +10,8 @@ use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Color, Modifier, Style};
-use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState};
+use ratatui::text::Span;
+use ratatui::widgets::{Cell, Paragraph, Row, Table, TableState};
 use sysinfo::{Pid, System};
 
 struct ProcessInfo {
@@ -34,7 +34,7 @@ impl App {
             system: System::new_all(),
             processes: Vec::new(),
             selected_pid: None,
-            status: String::from("Ready"),
+            status: String::new(),
         };
         app.refresh();
         app
@@ -153,7 +153,7 @@ fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<()> 
 }
 
 fn draw(frame: &mut ratatui::Frame<'_>, app: &App) {
-    let areas = Layout::vertical([Constraint::Min(5), Constraint::Length(2)]).split(frame.area());
+    let areas = Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).split(frame.area());
 
     let header = Row::new(["PID", "NAME", "CPU%", "MEMORY"]).style(
         Style::default()
@@ -178,11 +178,6 @@ fn draw(frame: &mut ratatui::Frame<'_>, app: &App) {
         ],
     )
     .header(header)
-    .block(
-        Block::default()
-            .title(format!(" Processes ({}) ", app.processes.len()))
-            .borders(Borders::ALL),
-    )
     .row_highlight_style(
         Style::default()
             .bg(Color::DarkGray)
@@ -193,13 +188,10 @@ fn draw(frame: &mut ratatui::Frame<'_>, app: &App) {
     table_state.select(app.selected_index());
     frame.render_stateful_widget(table, areas[0], &mut table_state);
 
-    let footer = Paragraph::new(vec![
-        Line::from("↑/↓ select    k terminate    q quit"),
-        Line::from(Span::styled(
-            app.status.as_str(),
-            Style::default().fg(Color::Yellow),
-        )),
-    ]);
+    let footer = Paragraph::new(Span::styled(
+        app.status.as_str(),
+        Style::default().fg(Color::Yellow),
+    ));
     frame.render_widget(footer, areas[1]);
 }
 

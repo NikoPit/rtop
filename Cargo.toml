@@ -5,6 +5,7 @@ edition = "2024"
 rust-version = "1.88"
 description = "A minimal process resource manager for the terminal"
 repository = "https://github.com/NikoPit/rxtop"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 crossterm = "0.28"

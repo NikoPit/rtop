@@ -14,9 +14,8 @@ The process table shows each process name, PID, CPU usage, and memory use. The s
 
 ## Run
 
-Install from crates.io, then start rtop:
+The crates.io name `rtop` is already in use. Until this project is published under an available name, run it from this checkout:
 
 ```sh
-cargo install rtop
-rtop
+cargo run --release
 ```

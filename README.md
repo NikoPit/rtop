@@ -1,4 +1,4 @@
-# rtop
+# rxtop
 
 A minimal terminal process resource manager written in Rust with Ratatui.
 
@@ -14,8 +14,9 @@ The process table shows each process name, PID, CPU usage, and memory use. The s
 
 ## Run
 
-The crates.io name `rtop` is already in use. Until this project is published under an available name, run it from this checkout:
+Install from crates.io, then run rxtop:
 
 ```sh
-cargo run --release
+cargo install rxtop
+rxtop
 ```

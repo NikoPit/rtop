@@ -17,12 +17,12 @@
           pkgs = import nixpkgs { inherit system; };
         in {
           default = pkgs.rustPlatform.buildRustPackage {
-            pname = "rtop";
+            pname = "rxtop";
             version = "0.1.0";
             src = self;
             cargoLock.lockFile = ./Cargo.lock;
             meta.description = "A minimal process resource manager for the terminal";
-            meta.mainProgram = "rtop";
+            meta.mainProgram = "rxtop";
           };
         });
     in {
@@ -31,7 +31,7 @@
       apps = forAllSystems (system: {
         default = {
           type = "app";
-          program = "${packages.${system}.default}/bin/rtop";
+          program = "${packages.${system}.default}/bin/rxtop";
           meta.description = "A minimal process resource manager for the terminal";
         };
       });

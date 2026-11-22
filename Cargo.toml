@@ -1,10 +1,10 @@
 [package]
-name = "rtop"
+name = "rxtop"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
 description = "A minimal process resource manager for the terminal"
-repository = "https://github.com/NikoPit/rtop"
+repository = "https://github.com/NikoPit/rxtop"
 
 [dependencies]
 crossterm = "0.28"

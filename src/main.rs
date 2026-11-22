@@ -171,7 +171,7 @@ fn draw(frame: &mut ratatui::Frame<'_>, app: &App) {
         Span::styled("MEM ", Style::default().fg(Color::Cyan)),
         Span::raw(memory),
     ]))
-    .block(Block::default().title(" rtop ").borders(Borders::ALL));
+    .block(Block::default().title(" rxtop ").borders(Borders::ALL));
     frame.render_widget(summary, areas[0]);
 
     let header = Row::new(["PID", "NAME", "CPU%", "MEMORY"]).style(
